@@ -6,7 +6,7 @@ import { FaSearch, FaBars, FaTimes, FaChevronDown } from "react-icons/fa";
 import { navigation } from "../../data/navigation";
 import { siteConfig } from "../../data/siteConfig";
 import LogoBadge from "../ui/LogoBadge";
-import qazipediaLogo from "../../assets/logos/qazipedia-logo.Png";
+import qazipediaLogo from "../../assets/logos/qazipedia-logo.png";
 
 export default function Navbar() {
   const [openMenu, setOpenMenu] = useState(null); // desktop dropdown label
