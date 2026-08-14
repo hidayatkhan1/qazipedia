@@ -5,8 +5,8 @@
 // If a file is ever missing or fails to load, LogoBadge falls back to the
 // dashed placeholder badge instead of a broken image icon.
 import LogoBadge from "./LogoBadge";
-import kmuLogo from "../../assets/logos/kmu-logo.Png";
-import ihsLogo from "../../assets/logos/ihs-logo.Png";
+import kmuLogo from "../../assets/logos/kmu-logo.png";
+import ihsLogo from "../../assets/logos/ihs-logo.png";
 
 const partners = [
   { code: "KMU", name: "Khyber Medical University", src: kmuLogo },
