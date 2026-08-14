@@ -1,0 +1,60 @@
+// Icon names map to react-icons/fa components resolved in the UI layer,
+// keeping data plain and framework-agnostic.
+export const categories = [
+  {
+    icon: "FaBookMedical",
+    title: "Notes",
+    description: "Region-wise lecture notes contributed by students and faculty.",
+    to: "/kmu-regions/notes",
+    count: "50+ files",
+  },
+  {
+    icon: "FaQuestionCircle",
+    title: "MCQs",
+    description: "Region-wise practice MCQ sets for self-testing.",
+    to: "/kmu-regions/mcqs",
+    count: "50+ sets",
+  },
+  {
+    icon: "FaChalkboardTeacher",
+    title: "Slides",
+    description: "Lecture slide decks shared by faculty across every region.",
+    to: "/kmu-regions/slides",
+    count: "50+ decks",
+  },
+  {
+    icon: "FaHeartbeat",
+    title: "Clinical Skills",
+    description: "Step-by-step procedure guides from vitals to IV therapy.",
+    to: "/clinical-skills",
+    count: "12 procedures",
+  },
+  {
+    icon: "FaSearchLocation",
+    title: "KMU Results",
+    description: "Check your class result by region, institute and program.",
+    to: "/results",
+    count: "7 KMU regions",
+  },
+  {
+    icon: "FaMapMarkedAlt",
+    title: "KMU Regions",
+    description: "Browse content by all 7 KMU regions across Khyber Pakhtunkhwa.",
+    to: "/kmu-regions",
+    count: "7 regions",
+  },
+  {
+    icon: "FaBriefcaseMedical",
+    title: "News & Jobs",
+    description: "Updates and healthcare job openings from KMU and KPK institutes.",
+    to: "/news-jobs",
+    count: "16+ listings",
+  },
+  {
+    icon: "FaDownload",
+    title: "Downloads",
+    description: "Syllabus documents, official forms and guidelines.",
+    to: "/downloads",
+    count: "6 categories",
+  },
+];

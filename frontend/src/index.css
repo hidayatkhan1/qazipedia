@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+/* ============================================================
+   QAZIPEDIA DESIGN TOKENS
+   Clinical-academic system: deep teal + warm parchment + amber
+   Display: Fraunces (editorial serif for headings + numerals)
+   Body:    Inter (clean, legible for dense study content)
+   ============================================================ */
+
+@theme {
+  /* Color: deep teal (authority, clinical calm) */
+  --color-teal-950: #0a2b2b;
+  --color-teal-900: #0e3a3a;
+  --color-teal-800: #144e4d;
+  --color-teal-700: #1c6663;
+  --color-teal-600: #257e79;
+  --color-teal-500: #359089;
+
+  /* Color: warm parchment (paper, notes, academic warmth) */
+  --color-parchment-50: #fdfbf6;
+  --color-parchment-100: #f8f2e4;
+  --color-parchment-200: #f0e6cd;
+  --color-parchment-300: #e4d3ac;
+
+  /* Color: amber accent (highlight, attention, CTAs) */
+  --color-amber-400: #e3a94a;
+  --color-amber-500: #d4922f;
+  --color-amber-600: #b5761e;
+
+  /* Ink + neutrals */
+  --color-ink-900: #1b211f;
+  --color-ink-700: #3a423f;
+  --color-ink-500: #656f6b;
+
+  /* Semantic */
+  --color-success: #2f7d5f;
+  --color-danger: #b8493f;
+
+  /* Type */
+  --font-display: "Fraunces", "Georgia", serif;
+  --font-body: "Inter", "Helvetica Neue", Arial, sans-serif;
+
+  /* Radius */
+  --radius-card: 0.875rem;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-parchment-50);
+  color: var(--color-ink-900);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--color-amber-500);
+  outline-offset: 2px;
+}
+
+/* Signature pulse-line motif - thin ECG-style rule used as a
+   section divider, echoing clinical monitor readouts */
+.pulse-rule {
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-amber-500) 50%,
+    transparent 100%
+  );
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-parchment-100);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-teal-700);
+  border-radius: 999px;
+}
+
+/* Hide scrollbar on horizontally-scrolling pill navs while keeping
+   the element scrollable (used by BsNursingSubNav and similar) */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
