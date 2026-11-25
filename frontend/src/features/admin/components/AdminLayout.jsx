@@ -9,8 +9,11 @@ const navItems = [
 ];
 
 export default function AdminLayout() {
-  const { isAuthenticated, logout } = useAdminAuth();
+  const { isAuthenticated, isLoading, logout } = useAdminAuth();
 
+  if (isLoading) {
+    return <p className="text-center text-sm text-ink-500 py-24">Checking your session…</p>;
+  }
   if (!isAuthenticated) return <Navigate to="/admin/login" replace />;
 
   return (

@@ -31,6 +31,7 @@ export const adminSections = [
       fileKind: "Uploaded file",
       fileSize: item.fileName || "—",
       date: item.uploadedAt,
+      fileUrl: item.fileUrl,
     }),
   },
   {
@@ -50,6 +51,7 @@ export const adminSections = [
       fileKind: "Uploaded file",
       fileSize: item.fileName || "—",
       date: item.uploadedAt,
+      fileUrl: item.fileUrl,
     }),
   },
   {
@@ -69,6 +71,7 @@ export const adminSections = [
       fileKind: "Uploaded file",
       fileSize: item.fileName || "—",
       date: item.uploadedAt,
+      fileUrl: item.fileUrl,
     }),
   },
   {
@@ -88,6 +91,7 @@ export const adminSections = [
       fileKind: "Uploaded file",
       fileSize: item.fileName || "—",
       date: item.uploadedAt,
+      fileUrl: item.fileUrl,
     }),
   },
   {
@@ -119,6 +123,7 @@ export const adminSections = [
       fileKind: "Uploaded file",
       fileSize: item.fileName || "—",
       date: item.uploadedAt,
+      fileUrl: item.fileUrl,
     }),
   },
 ];

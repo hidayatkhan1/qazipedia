@@ -12,7 +12,7 @@ function formatDate(iso) {
 }
 
 /**
- * item: { title, badgeLabel, fileKind, fileSize, date }
+ * item: { title, badgeLabel, fileKind, fileSize, date, fileUrl? }
  * icon: react-icons/fa component name, e.g. "FaBookMedical"
  */
 export default function ResourceCard({ item, icon }) {
@@ -40,8 +40,10 @@ export default function ResourceCard({ item, icon }) {
             <FaCalendarAlt size={10} /> {formatDate(item.date)}
           </span>
           <a
-            href="#"
-            onClick={(e) => e.preventDefault()}
+            href={item.fileUrl || "#"}
+            {...(item.fileUrl
+              ? { target: "_blank", rel: "noopener noreferrer" }
+              : { onClick: (e) => e.preventDefault() })}
             className="flex items-center gap-1.5 text-xs font-semibold text-teal-900 hover:text-amber-600 transition-colors"
           >
             <FaDownload size={11} /> Download

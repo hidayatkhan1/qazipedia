@@ -1,4 +1,4 @@
-import { useState, useMemo, useSyncExternalStore } from "react";
+import { useState, useMemo, useEffect, useSyncExternalStore } from "react";
 import { useSearchParams } from "react-router-dom";
 import { FaUpload, FaTrash, FaCheckCircle } from "react-icons/fa";
 import SEO from "../../../components/layout/SEO";
@@ -7,6 +7,9 @@ import EmptyState from "../../../components/ui/EmptyState";
 import { adminSections } from "../data/sectionsRegistry";
 import {
   getUploadedItems,
+  loadUploads,
+  isBackendConfigured,
+  MAX_FILE_BYTES,
   addUploadedItem,
   deleteUploadedItem,
   subscribeToUploads,
@@ -25,10 +28,13 @@ export default function UploadResource() {
   const [filterValue, setFilterValue] = useState(section.filterDimension.options[0]?.value ?? "");
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
-  const [fileName, setFileName] = useState("");
+  const [file, setFile] = useState(null);
+  const [fileInputKey, setFileInputKey] = useState(0); // remounts the file input to clear it
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const [justUploaded, setJustUploaded] = useState(false);
 
-  useSyncExternalStore(subscribeToUploads, getUploadsVersion);
+  const version = useSyncExternalStore(subscribeToUploads, getUploadsVersion);
 
   function handleSectionChange(nextKey) {
     setSearchParams({ section: nextKey });
@@ -39,27 +45,61 @@ export default function UploadResource() {
   }
 
   const storageKeyStr = `${section.key}:${resourceTypeSlug}`;
-  const existingItems = useMemo(() => getUploadedItems(storageKeyStr), [storageKeyStr]);
+  useEffect(() => {
+    loadUploads(storageKeyStr);
+  }, [storageKeyStr]);
+  // `version` is a dependency so the list refreshes right after an upload or delete.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const existingItems = useMemo(() => getUploadedItems(storageKeyStr), [storageKeyStr, version]);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    if (!title.trim() || !filterValue) return;
+    if (busy || !title.trim() || !filterValue) return;
+    setError("");
+
+    if (isBackendConfigured && !file) {
+      setError("Please choose a file to upload.");
+      return;
+    }
+    if (file && file.size > MAX_FILE_BYTES) {
+      setError("That file is too large (maximum 50 MB).");
+      return;
+    }
 
     const filterOption = section.filterDimension.options.find((o) => o.value === filterValue);
+    setBusy(true);
+    try {
+      await addUploadedItem(
+        storageKeyStr,
+        {
+          title: title.trim(),
+          note: note.trim(),
+          filterValue,
+          filterLabel: filterOption?.label ?? filterValue,
+          fileName: file?.name,
+        },
+        file
+      );
+      setTitle("");
+      setNote("");
+      setFile(null);
+      setFileInputKey((k) => k + 1);
+      setJustUploaded(true);
+      setTimeout(() => setJustUploaded(false), 2500);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
-    addUploadedItem(storageKeyStr, {
-      title: title.trim(),
-      note: note.trim(),
-      filterValue,
-      filterLabel: filterOption?.label ?? filterValue,
-      fileName: fileName || "no-file-selected.pdf",
-    });
-
-    setTitle("");
-    setNote("");
-    setFileName("");
-    setJustUploaded(true);
-    setTimeout(() => setJustUploaded(false), 2500);
+  async function handleDelete(id) {
+    setError("");
+    try {
+      await deleteUploadedItem(storageKeyStr, id);
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   return (
@@ -70,8 +110,9 @@ export default function UploadResource() {
         Upload Resource
       </h1>
       <p className="text-sm text-ink-700 mt-1">
-        Uploads appear immediately on the matching public page in this
-        browser.
+        {isBackendConfigured
+          ? "Uploads are saved to your Supabase project and appear on the matching public page for every visitor."
+          : "Local demo mode: uploads appear on the matching public page in this browser only."}
       </p>
 
       <Card className="mt-6">
@@ -144,25 +185,33 @@ export default function UploadResource() {
           <Field label="File">
             <input
               type="file"
-              onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")}
+              key={fileInputKey}
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               className="block w-full text-sm text-ink-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-teal-900/8 file:text-teal-900 hover:file:bg-teal-900/15"
             />
             <p className="text-xs text-ink-500 mt-1.5">
-              The file itself isn't stored anywhere yet — only its name.
-              Real file storage needs the Part 8 backend.
+              {isBackendConfigured
+                ? "PDF, Word, PowerPoint, Excel, image or MP4. Maximum 50 MB."
+                : "Demo mode: only the file name is kept. Connect Supabase to store real files."}
             </p>
           </Field>
 
           <button
             type="submit"
-            className="inline-flex items-center gap-2 rounded-full bg-amber-500 text-teal-950 font-semibold px-5 py-2.5 text-sm hover:bg-amber-400 transition-colors"
+            disabled={busy}
+            className="inline-flex items-center gap-2 rounded-full bg-amber-500 text-teal-950 font-semibold px-5 py-2.5 text-sm hover:bg-amber-400 disabled:opacity-60 transition-colors"
           >
-            <FaUpload size={12} /> Upload
+            <FaUpload size={12} /> {busy ? "Uploading…" : "Upload"}
           </button>
           {justUploaded && (
             <span className="inline-flex items-center gap-1.5 text-sm text-success ml-3">
               <FaCheckCircle size={12} /> Uploaded
             </span>
+          )}
+          {error && (
+            <p role="alert" className="text-sm text-danger mt-3">
+              {error}
+            </p>
           )}
         </form>
       </Card>
@@ -183,7 +232,7 @@ export default function UploadResource() {
                 </p>
               </div>
               <button
-                onClick={() => deleteUploadedItem(storageKeyStr, item.id)}
+                onClick={() => handleDelete(item.id)}
                 aria-label={`Delete ${item.title}`}
                 className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-danger hover:bg-danger/10 transition-colors"
               >
