@@ -7,12 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview",
-    "deploy:firebase": "npm run build && firebase deploy",
-    "deploy:firebase:hosting-only": "npm run build && firebase deploy --only hosting"
+    "preview": "vite preview"
   },
   "dependencies": {
-    "firebase": "^12.17.1",
+    "@supabase/supabase-js": "^2.119.2",
     "framer-motion": "^12.43.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

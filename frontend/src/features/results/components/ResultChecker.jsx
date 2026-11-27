@@ -1,4 +1,4 @@
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
   FaFilePdf,
   FaDownload,
@@ -11,7 +11,14 @@ import {
 import Card from "../../../components/ui/Card";
 import { regions, tracks, semesters, sessions } from "../data/regions";
 import { getResultDocument } from "../data/resultDocuments";
-import { getResultDocumentOverride, subscribeToUploads, getUploadsVersion } from "../../../lib/adminStorage";
+import {
+  getResultDocumentOverride,
+  isBackendConfigured,
+  isResultDocumentLoaded,
+  loadResultDocument,
+  subscribeToUploads,
+  getUploadsVersion,
+} from "../../../lib/adminStorage";
 
 const steps = ["region", "institute", "program", "semester", "session"];
 
@@ -66,21 +73,36 @@ export default function ResultChecker() {
   // this page is open.
   const uploadTick = useSyncExternalStore(subscribeToUploads, getUploadsVersion);
 
+  const querySelection = useMemo(
+    () =>
+      canSubmit
+        ? {
+            region: selection.region,
+            institute: selection.institute,
+            program: selection.program,
+            semester: Number(selection.semester),
+            session: selection.session,
+          }
+        : null,
+    [canSubmit, selection]
+  );
+
+  // Ask the backend whether this class's result PDF exists.
+  useEffect(() => {
+    if (showDocument && querySelection) loadResultDocument(querySelection);
+  }, [showDocument, querySelection]);
+
+  const checking =
+    isBackendConfigured && showDocument && querySelection && !isResultDocumentLoaded(querySelection);
+
   const document = useMemo(() => {
-    if (!showDocument || !canSubmit) return undefined;
-    const querySelection = {
-      region: selection.region,
-      institute: selection.institute,
-      program: selection.program,
-      semester: Number(selection.semester),
-      session: selection.session,
-    };
-    // A real admin upload always wins over the placeholder generator.
-    return (
-      getResultDocumentOverride(querySelection) ?? getResultDocument(querySelection)
-    );
+    if (!showDocument || !querySelection) return undefined;
+    const uploaded = getResultDocumentOverride(querySelection);
+    // With a real backend, ONLY real uploads are shown, never a made-up
+    // gazette. The generated placeholder remains for local demo mode.
+    return isBackendConfigured ? uploaded : uploaded ?? getResultDocument(querySelection);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showDocument, canSubmit, selection, uploadTick]);
+  }, [showDocument, querySelection, uploadTick]);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -210,7 +232,11 @@ export default function ResultChecker() {
         </form>
       </Card>
 
-      {document !== undefined && (
+      {checking && (
+        <p className="mt-8 text-center text-sm text-ink-500">Checking for this result…</p>
+      )}
+
+      {!checking && document !== undefined && (
         <div className="mt-8" id="result-document">
           {document ? (
             <Card className="border-2! border-teal-900/15!">
@@ -234,11 +260,14 @@ export default function ResultChecker() {
                     <span className="flex items-center gap-1.5">
                       <FaCalendarAlt size={10} /> Uploaded {formatDate(document.uploadedDate)}
                     </span>
-                    <span className="flex items-center gap-1.5">
-                      <FaUsers size={10} /> {document.studentCount} students listed
-                    </span>
+                    {document.studentCount > 0 && (
+                      <span className="flex items-center gap-1.5">
+                        <FaUsers size={10} /> {document.studentCount} students listed
+                      </span>
+                    )}
                     <span>
-                      {document.pageCount} {document.pageCount === 1 ? "page" : "pages"} ·{" "}
+                      {document.pageCount > 0 &&
+                        `${document.pageCount} ${document.pageCount === 1 ? "page" : "pages"} · `}
                       {formatFileSize(document.fileSizeKB)}
                     </span>
                   </div>
@@ -252,15 +281,21 @@ export default function ResultChecker() {
 
               <div className="flex flex-wrap gap-2 mt-5 pt-4 border-t border-teal-900/10">
                 <a
-                  href="#"
-                  onClick={(e) => e.preventDefault()}
+                  href={document.fileUrl || "#"}
+                  {...(document.fileUrl
+                    ? { target: "_blank", rel: "noopener noreferrer" }
+                    : { onClick: (e) => e.preventDefault() })}
                   className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full bg-teal-900 text-parchment-50 px-4 py-2 hover:bg-teal-800 transition-colors"
                 >
                   <FaEye size={11} /> View PDF
                 </a>
                 <a
-                  href="#"
-                  onClick={(e) => e.preventDefault()}
+                  href={
+                    document.fileUrl
+                      ? `${document.fileUrl}?download=${encodeURIComponent(document.fileName || "result.pdf")}`
+                      : "#"
+                  }
+                  {...(document.fileUrl ? {} : { onClick: (e) => e.preventDefault() })}
                   className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full border border-teal-700 text-teal-900 px-4 py-2 hover:bg-teal-900 hover:text-parchment-50 transition-colors"
                 >
                   <FaDownload size={11} /> Download

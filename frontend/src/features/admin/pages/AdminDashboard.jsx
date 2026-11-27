@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
 import { FaUpload, FaFileMedical, FaArrowRight, FaMapMarkedAlt } from "react-icons/fa";
 import SEO from "../../../components/layout/SEO";
@@ -6,6 +6,9 @@ import Card from "../../../components/ui/Card";
 import {
   getTotalUploadCount,
   listResultDocuments,
+  loadUploadCount,
+  loadResultDocuments,
+  isBackendConfigured,
   subscribeToUploads,
   getUploadsVersion,
 } from "../../../lib/adminStorage";
@@ -13,6 +16,11 @@ import { adminSections } from "../data/sectionsRegistry";
 
 export default function AdminDashboard() {
   useSyncExternalStore(subscribeToUploads, getUploadsVersion);
+
+  useEffect(() => {
+    loadUploadCount();
+    loadResultDocuments();
+  }, []);
 
   const totalUploads = getTotalUploadCount();
   const resultDocs = listResultDocuments();
@@ -25,9 +33,9 @@ export default function AdminDashboard() {
         Overview
       </h1>
       <p className="text-sm text-ink-700 mt-1">
-        Content uploaded here is stored in this browser only — see the
-        README's "Admin dashboard" section for what that means and how
-        to move to a real backend.
+        {isBackendConfigured
+          ? "Content uploaded here is saved to your Supabase project and shown to every visitor."
+          : "Local demo mode: uploads are stored in this browser only. Add the Supabase keys to go live (see backend/SUPABASE_SETUP.md)."}
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">

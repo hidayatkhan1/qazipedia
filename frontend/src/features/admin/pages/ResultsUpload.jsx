@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { FaUpload, FaTrash, FaCheckCircle } from "react-icons/fa";
 import SEO from "../../../components/layout/SEO";
 import Card from "../../../components/ui/Card";
@@ -6,6 +6,9 @@ import EmptyState from "../../../components/ui/EmptyState";
 import { regions, tracks, semesters, sessions } from "../../results/data/regions";
 import {
   setResultDocument,
+  loadResultDocuments,
+  isBackendConfigured,
+  MAX_FILE_BYTES,
   listResultDocuments,
   deleteResultDocument,
   subscribeToUploads,
@@ -24,10 +27,17 @@ export default function ResultsUpload() {
     semester: "",
     session: "",
   });
-  const [fileName, setFileName] = useState("");
+  const [file, setFile] = useState(null);
+  const [fileInputKey, setFileInputKey] = useState(0); // remounts the file input to clear it
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const [justUploaded, setJustUploaded] = useState(false);
 
   useSyncExternalStore(subscribeToUploads, getUploadsVersion);
+
+  useEffect(() => {
+    loadResultDocuments();
+  }, []);
 
   const region = regions.find((r) => r.slug === selection.region);
   const institute = region?.institutes.find((i) => i.slug === selection.institute);
@@ -43,34 +53,67 @@ export default function ResultsUpload() {
   const canSubmit =
     selection.region && selection.institute && selection.program && selection.semester && selection.session;
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (busy || !canSubmit) return;
+    setError("");
 
-    setResultDocument(
-      {
-        region: selection.region,
-        institute: selection.institute,
-        program: selection.program,
-        semester: Number(selection.semester),
-        session: selection.session,
-      },
-      {
-        fileName: fileName || "result-gazette.pdf",
-        pageCount: 1,
-        fileSizeKB: 250,
-        studentCount: 0,
-        // Human-readable labels, so the admin list view doesn't need
-        // to re-look-up institute/region names from slugs.
-        regionName: region?.name,
-        instituteName: institute?.name,
-      }
-    );
+    if (isBackendConfigured && !file) {
+      setError("Please choose the result PDF to upload.");
+      return;
+    }
+    if (file && file.size > MAX_FILE_BYTES) {
+      setError("That file is too large (maximum 50 MB).");
+      return;
+    }
 
-    setSelection({ region: "", institute: "", program: "", semester: "", session: "" });
-    setFileName("");
-    setJustUploaded(true);
-    setTimeout(() => setJustUploaded(false), 2500);
+    setBusy(true);
+    try {
+      await setResultDocument(
+        {
+          region: selection.region,
+          institute: selection.institute,
+          program: selection.program,
+          semester: Number(selection.semester),
+          session: selection.session,
+        },
+        {
+          fileName: file?.name,
+          // Real uploads record the real file size; the page/student counts
+          // aren't known, so they are left empty rather than invented.
+          pageCount: isBackendConfigured ? null : 1,
+          fileSizeKB: isBackendConfigured ? null : 250,
+          studentCount: isBackendConfigured ? null : 0,
+          regionName: region?.name,
+          instituteName: institute?.name,
+        },
+        file
+      );
+      setSelection({ region: "", institute: "", program: "", semester: "", session: "" });
+      setFile(null);
+      setFileInputKey((k) => k + 1);
+      setJustUploaded(true);
+      setTimeout(() => setJustUploaded(false), 2500);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDelete(doc) {
+    setError("");
+    try {
+      await deleteResultDocument({
+        region: doc.region,
+        institute: doc.institute,
+        program: doc.program,
+        semester: doc.semester,
+        session: doc.session,
+      });
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   const uploadedDocs = listResultDocuments();
@@ -198,11 +241,14 @@ export default function ResultsUpload() {
             <Field label="Result PDF">
               <input
                 type="file"
-                onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")}
+                key={fileInputKey}
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 className="block w-full text-sm text-ink-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-teal-900/8 file:text-teal-900 hover:file:bg-teal-900/15"
               />
               <p className="text-xs text-ink-500 mt-1.5">
-              .
+                {isBackendConfigured
+                  ? "One PDF for the whole class. Uploading again for the same class replaces the old file. Maximum 50 MB."
+                  : "Demo mode: only the file name is kept. Connect Supabase to store real files."}
               </p>
             </Field>
           )}
@@ -210,15 +256,21 @@ export default function ResultsUpload() {
           {canSubmit && (
             <button
               type="submit"
-              className="inline-flex items-center gap-2 rounded-full bg-amber-500 text-teal-950 font-semibold px-5 py-2.5 text-sm hover:bg-amber-400 transition-colors"
+              disabled={busy}
+              className="inline-flex items-center gap-2 rounded-full bg-amber-500 text-teal-950 font-semibold px-5 py-2.5 text-sm hover:bg-amber-400 disabled:opacity-60 transition-colors"
             >
-              <FaUpload size={12} /> Upload Result
+              <FaUpload size={12} /> {busy ? "Uploading…" : "Upload Result"}
             </button>
           )}
           {justUploaded && (
             <span className="inline-flex items-center gap-1.5 text-sm text-success ml-3">
               <FaCheckCircle size={12} /> Uploaded
             </span>
+          )}
+          {error && (
+            <p role="alert" className="text-sm text-danger mt-3">
+              {error}
+            </p>
           )}
         </form>
       </Card>
@@ -241,15 +293,7 @@ export default function ResultsUpload() {
                 </p>
               </div>
               <button
-                onClick={() =>
-                  deleteResultDocument({
-                    region: doc.region,
-                    institute: doc.institute,
-                    program: doc.program,
-                    semester: doc.semester,
-                    session: doc.session,
-                  })
-                }
+                onClick={() => handleDelete(doc)}
                 aria-label={`Delete ${doc.fileName}`}
                 className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-danger hover:bg-danger/10 transition-colors"
               >
